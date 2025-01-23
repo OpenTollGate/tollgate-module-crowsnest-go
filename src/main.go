@@ -38,14 +38,15 @@ func createVendorElement(payload string) (string, error) {
 func setupBroadcast() {
 	interfaces := []string{"default_radio0", "default_radio1"} // TODO: from config
 
-	// TODO from config:		Pubkey of: nsec17jlyx05kfqpyhrfuu6450x8shzlaslpngjnr8fe27raacmp49tzsvfaz9v
+	// TODO from config:		Pubkey of: merchant nsec17jlyx05kfqpyhrfuu6450x8shzlaslpngjnr8fe27raacmp49tzsvfaz9v
 	var tollgateVersion = "v0.1.0"
+	var gatewayIp = "192.168.1.1"
 	var pubkey = "c1f4c025e746fd307203ac3d1a1886e343bea76ceec5e286c96fb353be6cadea"
 	var allocationType = "KiB" // or min
 	var priceAllocationPer1024 = "1049000"
 	var priceUnit = "sat"
 
-	salesPitch := []string{tollgateVersion, pubkey, allocationType, priceAllocationPer1024, priceUnit}
+	salesPitch := []string{tollgateVersion, pubkey, allocationType, priceAllocationPer1024, priceUnit, gatewayIp}
 	var salesPitchString = strings.Join(salesPitch, "|")
 
 	log.Println(salesPitchString)
