@@ -45,6 +45,7 @@ func setupBroadcast() {
 	var allocationType = "KiB" // or min
 	var priceAllocationPer1024 = "1049000"
 	var priceUnit = "sat"
+	var ssid = "TollGate - MaryGreen"
 
 	salesPitch := []string{tollgateVersion, pubkey, allocationType, priceAllocationPer1024, priceUnit, gatewayIp}
 	var salesPitchString = strings.Join(salesPitch, "|")
@@ -57,12 +58,23 @@ func setupBroadcast() {
 		os.Exit(1)
 	}
 
-	err = setVendorElements(interfaces, vendorElement)
-	reloadWifi()
+	var errEnableWifi = configureWirelessOption([]string{"radio0", "radio1"}, "disabled", "0")
 
-	if err != nil {
-		log.Fatal(err)
+	var errVendorElements = configureWirelessOption(interfaces, "vendor_elements", vendorElement)
+	var errSSID = configureWirelessOption(interfaces, "ssid", ssid)
+	if errVendorElements != nil {
+		log.Fatal(errVendorElements)
 	}
+
+	if errSSID != nil {
+		log.Fatal(errSSID)
+	}
+
+	if errEnableWifi != nil {
+		log.Fatal(errEnableWifi)
+	}
+
+	reloadWifi()
 }
 
 func reloadWifi() {
@@ -83,30 +95,16 @@ func main() {
 	setupBroadcast()
 
 	log.Println("Shutting down Tollgate - CrowsNest")
-
-	//ifaces := wireless.Interfaces()
-	//fmt.Println(ifaces)
-	//
-	//wifis, err := wifiscan.Scan()
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//for _, w := range wifis {
-	//	fmt.Println(w.SSID, w.RSSI)
 }
 
-func setVendorElements(interfaces []string, vendorElement string) error {
+func configureWirelessOption(interfaces []string, name string, value string) error {
 	for _, iface := range interfaces {
-		if vendorElement == "" {
-			return errors.New("vendorElement cannot be empty string")
-		}
+		log.Println("setting wireless interface " + iface + " option " + name + " to " + value)
 
 		u := uci.NewTree("/etc/config")
-		u.Del("wireless", iface, "vendor_elements")
 
-		log.Println("add element to inteface " + iface + ", element: " + vendorElement)
-		if ok := u.Set("wireless", iface, "vendor_elements", vendorElement); !ok {
-			return errors.New("could not add vendor_elements to interface " + iface + ": " + vendorElement)
+		if ok := u.Set("wireless", iface, name, value); !ok {
+			return errors.New("could not set option " + name + " on interface " + iface + ": " + value)
 		}
 
 		// Save edits
@@ -119,64 +117,3 @@ func setVendorElements(interfaces []string, vendorElement string) error {
 
 	return nil
 }
-
-//func setWifiSSID() {
-//
-//	var availableInterface = getAvailableWirelessInterfaceName()
-//	fmt.Println(availableInterface)
-//
-//	// get respective modes
-//
-//	// take the one with 'ap'
-//	iwlistCmd := exec.Command("iwlist", availableInterface, "scan")
-//	iwlistCmdOut, err := iwlistCmd.Output()
-//	if err != nil {
-//		fmt.Println(err, "Error when getting the interface information.")
-//	} else {
-//		fmt.Println(string(iwlistCmdOut))
-//	}
-//}
-//
-//func getAvailableWirelessInterfaceName() string {
-//	var allInterfaces = getWifiInterfaces()
-//
-//	var found []string
-//
-//	scanner := bufio.NewScanner(strings.NewReader(allInterfaces))
-//	for scanner.Scan() {
-//		var line = scanner.Text()
-//		if strings.HasSuffix(line, "wifi-iface") {
-//
-//			var interfaceName string = strings.Split(line, "=")[0]
-//
-//			found = append(found, interfaceName)
-//		}
-//	}
-//
-//	for _, interfaceName := range found {
-//		var search string = "wireless." + string(interfaceName) + ".mode='ap'"
-//
-//		scanner := bufio.NewScanner(strings.NewReader(allInterfaces))
-//		for scanner.Scan() {
-//			var line = scanner.Text()
-//
-//			if line == search {
-//				return interfaceName
-//			}
-//		}
-//	}
-//
-//	return "?"
-//}
-//
-//func getWifiInterfaces() string {
-//	iwlistCmd := exec.Command("uci", "show", "wireless")
-//	iwlistCmdOut, err := iwlistCmd.Output()
-//	if err != nil {
-//		fmt.Println(err, "Error when getting the interface information.")
-//	} else {
-//		return string(iwlistCmdOut)
-//	}
-//
-//	return "?"
-//}

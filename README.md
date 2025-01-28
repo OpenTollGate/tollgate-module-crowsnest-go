@@ -21,8 +21,6 @@ scp crowsnest root@192.168.1.1:/root/crowsnest
 ```bash
 cd ./src
 env GOOS=linux GOARCH=arm64 go build -o crowsnest -trimpath -ldflags="-s -w"
-
-# Hint: copy to connected router 
 scp -O crowsnest root@192.168.1.1:/root/crowsnest # X.X == Router IP
 ```
 
