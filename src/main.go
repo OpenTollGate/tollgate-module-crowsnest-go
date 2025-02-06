@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -36,7 +37,15 @@ func createVendorElement(payload string) (string, error) {
 }
 
 func setupBroadcast() {
-	interfaces := []string{"default_radio0", "default_radio1"} // TODO: from config
+	openInterfaces := []string{
+		"tollgate_2g_open",
+		"tollgate_5g_open",
+	} // TODO: from config
+
+	proInterfaces := []string{
+		"tollgate_2g_pro",
+		"tollgate_5g_pro",
+	} // TODO: from config
 
 	// TODO from config:		Pubkey of: merchant nsec17jlyx05kfqpyhrfuu6450x8shzlaslpngjnr8fe27raacmp49tzsvfaz9v
 	var tollgateVersion = "v0.1.0"
@@ -45,7 +54,9 @@ func setupBroadcast() {
 	var allocationType = "KiB" // or min
 	var priceAllocationPer1024 = "1049000"
 	var priceUnit = "sat"
-	var ssid = "TollGate - MaryGreen"
+
+	var openSsid = "TollGate - MaryGreen"
+	var proSsid = "TollGate Pro - MaryGreen"
 
 	salesPitch := []string{tollgateVersion, pubkey, allocationType, priceAllocationPer1024, priceUnit, gatewayIp}
 	var salesPitchString = strings.Join(salesPitch, "|")
@@ -60,14 +71,20 @@ func setupBroadcast() {
 
 	var errEnableWifi = configureWirelessOption([]string{"radio0", "radio1"}, "disabled", "0")
 
-	var errVendorElements = configureWirelessOption(interfaces, "vendor_elements", vendorElement)
-	var errSSID = configureWirelessOption(interfaces, "ssid", ssid)
+	var errVendorElements = configureWirelessOption(slices.Concat(openInterfaces, proInterfaces), "vendor_elements", vendorElement)
+
 	if errVendorElements != nil {
 		log.Fatal(errVendorElements)
 	}
 
-	if errSSID != nil {
-		log.Fatal(errSSID)
+	var errOpenSsid = configureWirelessOption(openInterfaces, "ssid", openSsid)
+	if errOpenSsid != nil {
+		log.Fatal(errOpenSsid)
+	}
+
+	var errProSsid = configureWirelessOption(proInterfaces, "ssid", proSsid)
+	if errProSsid != nil {
+		log.Fatal(errProSsid)
 	}
 
 	if errEnableWifi != nil {
