@@ -1,8 +1,9 @@
 # Tollgate Module - crowsnest (go)
+![](https://cdn.satellite.earth/5105c47ab72005a749d38d79fce223fd49a81ad02ce69ac32409830d8acecf5b.png)
 
-This Tollgate module is responsible to look if there is LAN in sight, meaning it will look out for upstream tollgates to connect to. It collects datapoints like the other tollgate's price, pubkey, signal strength, etc. This data is passed on as a Nostr event on the local crowsnest ([crowsnest Module](https://github.com/OpenTollGate/tollgate-module-crowsnest-go))
+This tollgate module is responsible for interaction with the router's radio. It sets the network information and broadcasts things like pricing. It's also responsible for looking out for upstream tollgates to connect to, and collecting datapoints like the other tollgate's price, pubkey, signal strength, etc. 
 
-The on-device crowsnest makes no decisions on this data because connecting to another tollgate is a financial decision that is taken by the [Merchant module](https://github.com/OpenTollGate/tollgate-module-merchant-go).
+The on-device crowsnest makes no decisions on this data because connecting to another tollgate is a financial decision, which is a responsibility of the [Merchant module](https://github.com/OpenTollGate/tollgate-module-merchant-go).
 
 # Compile for ATH79 (GL-AR300 NOR)
 
