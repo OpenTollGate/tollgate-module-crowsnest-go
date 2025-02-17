@@ -30,3 +30,7 @@ packages:
 - iw (at least for debugging)
 
 wifi scanning https://superuser.com/questions/958889/nl80211-not-foundhow-resolve-this-error-in-openwrt
+
+## License
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+
