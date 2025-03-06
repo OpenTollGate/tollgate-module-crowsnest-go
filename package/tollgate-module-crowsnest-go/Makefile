@@ -1,22 +1,20 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=tollgate-module-crowsnest-go
+PKG_VERSION:=$(shell git rev-list --count HEAD 2>/dev/null || echo "0.0.1").$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+PKG_RELEASE:=1
 
-# Dynamic version generation
-define Package/$(PKG_NAME)/GetGitInfo
-    cd $(CURDIR) && \
-    PKG_BRANCH=$$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main") && \
-    PKG_COMMITS=$$(git rev-list --count HEAD 2>/dev/null || echo "1") && \
-    PKG_SHORT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
-    if [ "$$PKG_BRANCH" = "main" ] || [ "$$PKG_BRANCH" = "master" ]; then \
-        echo "0.$$PKG_COMMITS" ; \
-    else \
-        echo "0.$$PKG_COMMITS-$$PKG_BRANCH" ; \
-    fi
-endef
-
-PKG_VERSION:=$(shell $(call Package/$(PKG_NAME)/GetGitInfo))
-PKG_RELEASE:=$(shell cd $(CURDIR) 2>/dev/null && git rev-parse --short HEAD 2>/dev/null || echo "1")
+# Place conditional checks EARLY - before variables that depend on them
+ifneq ($(TOPDIR),)
+	# Feed-specific settings (auto-clone from git)
+	PKG_SOURCE_PROTO:=git
+	PKG_SOURCE_URL:=https://github.com/OpenTollGate/tollgate-module-crowsnest-go.git
+	PKG_SOURCE_VERSION:=main
+	PKG_MIRROR_HASH:=skip
+else
+	# SDK build context (local files)
+	PKG_BUILD_DIR:=$(CURDIR)
+endif
 
 PKG_MAINTAINER:=Your Name <your@email.com>
 PKG_LICENSE:=CC0-1.0
@@ -26,11 +24,10 @@ PKG_BUILD_DEPENDS:=golang/host
 PKG_BUILD_PARALLEL:=1
 PKG_USE_MIPS16:=0
 
-GO_PKG:=https://github.com/OpenTollGate/tollgate-module-crowsnest-go.git
-GO_PKG_BUILD_PKG:=$(GO_PKG)
+GO_PKG:=github.com/OpenTollGate/tollgate-module-crowsnest-go
 
 include $(INCLUDE_DIR)/package.mk
-include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
+include $(TOPDIR)/package/lang/golang-package.mk
 
 define Package/$(PKG_NAME)
 	SECTION:=net
@@ -44,14 +41,45 @@ define Package/$(PKG_NAME)/description
 endef
 
 define Build/Prepare
-	mkdir -p $(PKG_BUILD_DIR)
-	$(CP) ./src/* $(PKG_BUILD_DIR)/
-	cd $(PKG_BUILD_DIR) && go mod tidy
+	# First call the default prepare to handle git source fetching
+	$(call Build/Prepare/Default)
+
+	# Debug: check what's in the build directory after default prepare
+	@echo "Contents of PKG_BUILD_DIR after default prepare:"
+	@ls -la $(PKG_BUILD_DIR) || echo "Directory empty or doesn't exist"
+
+	# Clean up Go module cache if needed
+	cd $(PKG_BUILD_DIR) && \
+	rm -f go.mod go.sum && \
+	go mod init tollgate-module-crowsnest-go && \
+	go mod edit -replace github.com/OpenTollgate/crowsnest=./ && \
+	go mod tidy && \
+	go get github.com/fiatjaf/khatru && \
+	go get github.com/nbd-wtf/go-nostr
+endef
+
+define Build/Configure
+endef
+
+define Build/Compile
+	cd $(PKG_BUILD_DIR) && \
+	CGO_ENABLED=0 \
+	GOOS=linux \
+	GOARCH=arm64 \
+	go build -trimpath \
+		-ldflags "-s -w \
+		-X main.Version=$(PKG_VERSION) \
+		-X main.CommitHash=$(PKG_RELEASE) \
+		-X main.BuildTime=$(shell date -u '+%Y-%m-%d_%I:%M:%S%p')" \
+		-o $(PKG_BUILD_DIR)/tollgate-crowsnest main.go
 endef
 
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(GO_PKG_BUILD_BIN_DIR)/tollgate-crowsnest $(1)/usr/bin/tollgate-crowsnest
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tollgate-crowsnest $(1)/usr/bin/tollgate-crowsnest
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))
+
+# Print IPK path after successful compilation
+PKG_FINISH:=$(shell echo "Successfully built: $(IPK_FILE)" >&2)
