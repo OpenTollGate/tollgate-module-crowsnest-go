@@ -71,12 +71,29 @@ define Build/Compile
 	CGO_ENABLED=0 \
 	GOOS=linux \
 	GOARCH=arm64 \
-	go build -trimpath \
-		-ldflags "-s -w \
+	GOFLAGS="-mod=readonly -modcacherw" \
+	GOWORK=off \
+	go mod tidy && \
+	go mod vendor && \
+	GODEBUG=netdns=go+1 \
+	go build -v -x -mod=vendor -trimpath \
+		-tags netgo,osusergo \
+		-ldflags "-s -w -extldflags '-static' \
 		-X main.Version=$(PKG_VERSION) \
 		-X main.CommitHash=$(PKG_RELEASE) \
 		-X main.BuildTime=$(shell date -u '+%Y-%m-%d_%I:%M:%S%p')" \
 		-o $(PKG_BUILD_DIR)/tollgate-crowsnest main.go
+
+	@if [ ! -f "$(PKG_BUILD_DIR)/tollgate-crowsnest" ]; then \
+		echo "\n!!! NO BINARY CREATED - BUILD FAILED !!!"; \
+		echo "Build artifacts:" ; \
+		ls -la $(PKG_BUILD_DIR) ; \
+		exit 1; \
+	fi
+
+	# Create symlink to binary in expected location for install phase
+	mkdir -p $(PKG_BUILD_DIR)/.go_work/build/bin
+	ln -sf $(PKG_BUILD_DIR)/tollgate-crowsnest $(PKG_BUILD_DIR)/.go_work/build/bin/tollgate-relay
 endef
 
 define Package/$(PKG_NAME)/install
